@@ -6,8 +6,8 @@ use rand::{thread_rng, Rng};
 
 fn random_point() -> Point {
     let mut rng = thread_rng();
-    let x = rng.gen_range(10..3990);
-    let y = rng.gen_range(10..3990);
+    let x = rng.gen_range(20..3980);
+    let y = rng.gen_range(20..3980);
     Point {
         x: x as f32,
         y: y as f32
@@ -50,7 +50,7 @@ fn create_points_vector(p: Point, r: f32) -> Vec<LinePoint> {
 }
 
 
-fn check_if_within_range(p: Point, v: &mut Vec<(Point, f32)>, r:f32) -> bool {
+fn check_if_within_range(p: Point, v: &mut Vec<(Point, f32)>, points_range:f32) -> bool {
     let mut is_valid = true;
     v.iter().enumerate().for_each(|(i, valid_point)| {
         // let t1 = p.x < valid_point.0.x - r*19 as f32;
@@ -65,26 +65,30 @@ fn check_if_within_range(p: Point, v: &mut Vec<(Point, f32)>, r:f32) -> bool {
         // let t3 = p.y > valid_point.0.y + r*19 as f32;               // top
         // let t4 = p.y < valid_point.0.y - valid_point.1*19 as f32;   // bottom
 
-        if (is_valid) {
-            let left  = valid_point.0.x - (r * 19.0);
-            let right = valid_point.0.x + (valid_point.1 * 19.0);
-            let top = valid_point.0.y + (r * 19.0);
-            let bottom = valid_point.0.y - (valid_point.1 * 19.0);
+        if is_valid {
+            let left   = valid_point.0.x - (points_range  * 20.0);
+            let right  = valid_point.0.x + (valid_point.1 * 20.0);
+            let top    = valid_point.0.y + (points_range  * 20.0);
+            let bottom = valid_point.0.y - (valid_point.1 * 20.0);
 
-            let t_left = p.x < left;
-            let t_right = p.x > right;
-            let t_top = p.y > top;
-            let t_bottom = p.y < bottom;
+            // let t_left = p.x < left;
+            // let t_right = p.x > right;
+            // let t_top = p.y > top;
+            // let t_bottom = p.y < bottom;
 
-            println!("-----------Trying VP {}--------------", i);
-            println!("r:{} | VP:{}", r*19.0, valid_point.1*19.0);
-            println!("l:{} | r:{} | t: {} | b: {}", left, right, top, bottom);
-            println!("P:{:?} | VP:{:?} | [{:?} {:?} {:?} {:?}]", p,valid_point.0,t_left,t_right,t_top,t_bottom);
-            println!("---------------------------");
+            let t_left   = p.x > left;
+            let t_right  = p.x < right;
+            let t_top    = p.y < top;
+            let t_bottom = p.y > bottom;
 
-            is_valid = is_valid && ( t_left || t_right ) && ( t_top || t_bottom );
+            // println!("-----------Trying VP {}--------------", i);
+            // // println!("l:{} | r:{} | t: {} | b: {}", left, right, top, bottom);
+            // println!("P:{:?} | VP:{:?} | [{:?} {:?} {:?} {:?}] | Range: {} | VP: {}", p,valid_point.0,t_left,t_right,t_top,t_bottom,r*19.0, valid_point.1*19.0);
+            // println!("---------------------------");
 
-            println!("IS IT OKAY: {}", is_valid);
+            is_valid = is_valid && ( !(t_left && t_right  && t_top && t_bottom) );
+
+            // println!("IS IT OKAY: {}", is_valid);
         }
 
     });
@@ -117,39 +121,68 @@ fn main() {
 
     let mut rng = thread_rng();
 
-    for iter in 0..100 {
-        let mut start = Point { x: 0.0 , y: 0.0 };
-        let mut size_r = rng.gen_range(6..20) as f32;
-        let mut is_valid = false;
-        let mut try_count = 0;
+    for y in (20..4000).step_by(20) {
+        for x in (20..4000).step_by(20) {
+            let mut start_point = Point { x: x as f32, y: y as f32};
+            let mut size_r = rng.gen_range(10..20) as f32;
+            let is_valid = check_if_within_range(start_point, &mut valid_points, 19.0);
 
-        println!("ITER: {}", iter);
-        println!("SIZE_R: {}", size_r);
+            println!("=========================================================");
+            println!("THE KING: {},{} | Size: {} | Valid: {}", x, y, size_r, is_valid);
+            println!("=========================================================");
 
-        while !is_valid && try_count <= 200 {
-            start = random_point();
-            size_r = rng.gen_range(6..20) as f32;
-            is_valid = check_if_within_range(start, &mut valid_points, size_r);
-            try_count += 1;
+            if !is_valid {
+                continue;
+            }
+
+            println!("ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ");
+
+            valid_points.push((start_point, size_r));
+            let vec = create_points_vector(start_point, size_r);
+            let mut line: Drawing = Drawing::new();
+            line = line.with_shape(Shape::Line {
+                start: start_point,
+                points: vec
+            });
+            line = line.with_style(Style::stroked(5, RGB { r: 10 * size_r as u8, g: 8 * size_r as u8, b: 6 * size_r as u8 } ));
+
+            canvas.display_list.add(line);
         }
-
-        if try_count > 199 {
-            continue;
-        }
-
-        valid_points.push((start, size_r));
-
-        let vec = create_points_vector(start, size_r);
-
-        let mut line: Drawing = Drawing::new();
-        line = line.with_shape(Shape::Line {
-            start: start,
-            points: vec
-        });
-        line = line.with_style(Style::stroked(5, RGB { r: 10 * size_r as u8, g: 8 * size_r as u8, b: 6 * size_r as u8 } ));
-
-        canvas.display_list.add(line);
     }
+
+    // for iter in 0..100 {
+    //     let mut start = Point { x: 0.0 , y: 0.0 };
+    //     let mut size_r = rng.gen_range(6..20) as f32;
+    //     let mut is_valid = false;
+    //     let mut try_count = 0;
+    //
+    //     println!("ITER: {}", iter);
+    //     println!("SIZE_R: {}", size_r);
+    //
+    //     while !is_valid && try_count <= 200 {
+    //         start = random_point();
+    //         size_r = rng.gen_range(6..20) as f32;
+    //         is_valid = check_if_within_range(start, &mut valid_points, size_r);
+    //         try_count += 1;
+    //     }
+    //
+    //     if try_count > 199 {
+    //         continue;
+    //     }
+    //
+    //     valid_points.push((start, size_r));
+    //
+    //     let vec = create_points_vector(start, size_r);
+    //
+    //     let mut line: Drawing = Drawing::new();
+    //     line = line.with_shape(Shape::Line {
+    //         start: start,
+    //         points: vec
+    //     });
+    //     line = line.with_style(Style::stroked(5, RGB { r: 10 * size_r as u8, g: 8 * size_r as u8, b: 6 * size_r as u8 } ));
+    //
+    //     canvas.display_list.add(line);
+    // }
 
 
 // create a new drawing
