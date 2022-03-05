@@ -14,10 +14,10 @@ fn random_point() -> Point {
     }
 }
 
-fn create_points_vector(p: Point, r: f32) -> Vec<LinePoint> {
+fn create_points_vector(p: Point, r: f32, loop_size: i32) -> Vec<LinePoint> {
     let mut point_vec: Vec<LinePoint> = Vec::new();
 
-    for i in 1..20 {
+    for i in 0..loop_size {
         let mut p1 = Point { x: p.x,                 y: p.y };
         let mut p2 = Point { x: p.x + (r*i as f32) , y: p.y };
         let mut p3 = Point { x: p.x + (r*i as f32) , y: p.y + (r*i as f32) };
@@ -50,36 +50,19 @@ fn create_points_vector(p: Point, r: f32) -> Vec<LinePoint> {
 }
 
 
-fn check_if_within_range(p: Point, v: &mut Vec<(Point, f32)>, points_range:f32) -> bool {
+fn check_if_within_range(p: Point, v: &mut Vec<(Point, f32, f32)>, points_range:f32, loop_size: f32) -> bool {
     let mut is_valid = true;
-    v.iter().enumerate().for_each(|(i, valid_point)| {
-        // let t1 = p.x < valid_point.0.x - r*19 as f32;
-        // let t2 = p.x > valid_point.0.x + valid_point.1*19 as f32;
-        //
-        // let t3 = p.y < valid_point.0.y - r*19 as f32;
-        // let t4 = p.y > valid_point.0.y + valid_point.1*19 as f32;
-
-        // let t1 = p.x < valid_point.0.x - r*19 as f32;               // left
-        // let t2 = p.x > valid_point.0.x + valid_point.1*19 as f32;   // right
-        //
-        // let t3 = p.y > valid_point.0.y + r*19 as f32;               // top
-        // let t4 = p.y < valid_point.0.y - valid_point.1*19 as f32;   // bottom
-
+    v.iter().rev().take(1000).enumerate().for_each(|(i, valid_point)| {
         if is_valid {
-            let left   = valid_point.0.x - (points_range  * 20.0);
-            let right  = valid_point.0.x + (valid_point.1 * 20.0);
-            let top    = valid_point.0.y + (points_range  * 20.0);
-            let bottom = valid_point.0.y - (valid_point.1 * 20.0);
-
-            // let t_left = p.x < left;
-            // let t_right = p.x > right;
-            // let t_top = p.y > top;
-            // let t_bottom = p.y < bottom;
-
+            let left   = valid_point.0.x - (points_range  * loop_size);
+            let right  = valid_point.0.x + (valid_point.1 * valid_point.2);
+            let top    = valid_point.0.y - (points_range  * loop_size);
+            let bottom = valid_point.0.y + (valid_point.1 * valid_point.2);
+            
             let t_left   = p.x > left;
             let t_right  = p.x < right;
-            let t_top    = p.y < top;
-            let t_bottom = p.y > bottom;
+            let t_top    = p.y > top;
+            let t_bottom = p.y < bottom;
 
             // println!("-----------Trying VP {}--------------", i);
             // // println!("l:{} | r:{} | t: {} | b: {}", left, right, top, bottom);
@@ -95,6 +78,53 @@ fn check_if_within_range(p: Point, v: &mut Vec<(Point, f32)>, points_range:f32) 
     return is_valid;
 }
 
+fn set_line_and_loop(size_r: f32) -> (u32, i32) {
+    let mut line_width: u32 = 0;
+    let mut loop_size: i32 = 0;
+
+    if size_r < 4.0 {
+        line_width = 1;
+        loop_size = 3;
+    } else if size_r < 6.0 {
+        line_width = 1;
+        loop_size = 4;
+    } else if size_r < 8.0 {
+        line_width = 2;
+        loop_size = 5;
+    } else if size_r < 11.0 {
+        line_width = 2;
+        loop_size = 8;
+    } else if size_r < 14.0 {
+        line_width = 3;
+        loop_size = 10;
+    } else if size_r < 18.0 {
+        line_width = 3;
+        loop_size = 14;
+    } else {
+        line_width = 4;
+        loop_size = 20;
+    }
+
+    return (line_width, loop_size);
+}
+
+fn randomize_color(size_r: f32) -> RGB {
+    let mut rng = thread_rng();
+    let r = rng.gen_range(210..255) - (10 * size_r as u8);
+    let g = rng.gen_range(210..255) - (8  * size_r as u8);
+    let b = rng.gen_range(210..255) - (6  * size_r as u8);
+    RGB {
+        r,
+        g,
+        b
+    }
+    // RGB {
+    //     r: 255 - (12 * size_r as u8),
+    //     g: 255 - (9 * size_r as u8),
+    //     b: 255 - (7 * size_r as u8)
+    // }
+}
+
 // (x,y)          (x+r,y)
 //     .-----------.
 //     |           |
@@ -105,102 +135,51 @@ fn check_if_within_range(p: Point, v: &mut Vec<(Point, f32)>, points_range:f32) 
 
 fn main() {
     // create a canvas to draw on
-    let mut canvas = Canvas::new(4000, 4000);
-    let mut valid_points: Vec<(Point, f32)> = Vec::new();
-
-    // let mut drawing_vec: Vec<Drawing> = Vec::new();
-    // let mut point_vec: Vec<LinePoint> = Vec::new();
-    //
-    // for x in 1..200 {
-    //     point_vec.push(LinePoint::Straight {
-    //         point: random_point()
-    //     })
-    // }
-
-    // println!("{:#?}", point_vec);
-
+    let mut canvas = Canvas::new(2000, 2000);
+    let mut valid_points: Vec<(Point, f32, f32)> = Vec::new();
     let mut rng = thread_rng();
 
-    for y in (20..4000).step_by(20) {
-        for x in (20..4000).step_by(20) {
-            let mut start_point = Point { x: x as f32, y: y as f32};
-            let mut size_r = rng.gen_range(10..20) as f32;
-            let is_valid = check_if_within_range(start_point, &mut valid_points, 19.0);
+    for y in (20..2000).step_by(4) {
 
-            println!("=========================================================");
-            println!("THE KING: {},{} | Size: {} | Valid: {}", x, y, size_r, is_valid);
-            println!("=========================================================");
+        println!("y: {} | VecSize: {}", y, valid_points.len());
+
+        for x in (20..2000).step_by(4) {
+            let mut start_point = Point { x: x as f32, y: y as f32};
+            let mut size_r = rng.gen_range(8..20) as f32;
+            // let mut is_valid = check_if_within_range(start_point, &mut valid_points, 10.0);
+            let mut line_width = 1;
+            let mut loop_size = 20;
+            let mut is_valid = check_if_within_range(start_point, &mut valid_points, size_r, loop_size as f32);
 
             if !is_valid {
+                size_r = 20.0;
+                while !is_valid && size_r > 3.0 {
+                    (line_width, loop_size) = set_line_and_loop(size_r);
+                    is_valid = check_if_within_range(start_point, &mut valid_points, size_r, loop_size as f32);
+                    size_r -= 1.0;
+                }
+            }
+
+            if is_valid {
+                (line_width, loop_size) = set_line_and_loop(size_r);
+            } else {
                 continue;
             }
 
-            println!("ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ADDED ");
-
-            valid_points.push((start_point, size_r));
-            let vec = create_points_vector(start_point, size_r);
+            valid_points.push((start_point, size_r, loop_size as f32));
+            let vec = create_points_vector(start_point, size_r, loop_size);
             let mut line: Drawing = Drawing::new();
             line = line.with_shape(Shape::Line {
                 start: start_point,
                 points: vec
             });
-            line = line.with_style(Style::stroked(5, RGB { r: 10 * size_r as u8, g: 8 * size_r as u8, b: 6 * size_r as u8 } ));
+            line = line.with_style(Style::stroked(line_width, randomize_color(size_r) ));
 
             canvas.display_list.add(line);
+
         }
+
     }
-
-    // for iter in 0..100 {
-    //     let mut start = Point { x: 0.0 , y: 0.0 };
-    //     let mut size_r = rng.gen_range(6..20) as f32;
-    //     let mut is_valid = false;
-    //     let mut try_count = 0;
-    //
-    //     println!("ITER: {}", iter);
-    //     println!("SIZE_R: {}", size_r);
-    //
-    //     while !is_valid && try_count <= 200 {
-    //         start = random_point();
-    //         size_r = rng.gen_range(6..20) as f32;
-    //         is_valid = check_if_within_range(start, &mut valid_points, size_r);
-    //         try_count += 1;
-    //     }
-    //
-    //     if try_count > 199 {
-    //         continue;
-    //     }
-    //
-    //     valid_points.push((start, size_r));
-    //
-    //     let vec = create_points_vector(start, size_r);
-    //
-    //     let mut line: Drawing = Drawing::new();
-    //     line = line.with_shape(Shape::Line {
-    //         start: start,
-    //         points: vec
-    //     });
-    //     line = line.with_style(Style::stroked(5, RGB { r: 10 * size_r as u8, g: 8 * size_r as u8, b: 6 * size_r as u8 } ));
-    //
-    //     canvas.display_list.add(line);
-    // }
-
-
-// create a new drawing
-//     let mut rect = Drawing::new()
-// // give it a shape
-//         .with_shape(Shape::Rectangle {
-//             width: 50,
-//             height: 50,
-//         })
-// // move it around
-//         .with_xy(25.0, 25.0)
-// // give it a cool style
-//         .with_style(Style::stroked(5, RGB { r: 255, g: 0, b: 0 } ));
-
-// add it to the canvas
-//     canvas.display_list.add(rect);
-
-// save the canvas as an svg
     render::save(
         &canvas,
         "tests/svg/basic_end_to_end.svg",
