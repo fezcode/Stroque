@@ -92,16 +92,16 @@ fn set_line_and_loop(size_r: f32) -> (u32, i32) {
         line_width = 2;
         loop_size = 5;
     } else if size_r < 11.0 {
-        line_width = 2;
+        line_width = 3;
         loop_size = 8;
     } else if size_r < 14.0 {
-        line_width = 3;
+        line_width = 4;
         loop_size = 10;
     } else if size_r < 18.0 {
-        line_width = 3;
+        line_width = 5;
         loop_size = 14;
     } else {
-        line_width = 4;
+        line_width = 5;
         loop_size = 20;
     }
 
@@ -110,9 +110,9 @@ fn set_line_and_loop(size_r: f32) -> (u32, i32) {
 
 fn randomize_color(size_r: f32) -> RGB {
     let mut rng = thread_rng();
-    let r = rng.gen_range(210..255) - (10 * size_r as u8);
-    let g = rng.gen_range(210..255) - (8  * size_r as u8);
-    let b = rng.gen_range(210..255) - (6  * size_r as u8);
+    let r = /* rng.gen_range(210..255) - */ (10 * size_r as u8);
+    let g = /* rng.gen_range(210..255) - */ (8  * size_r as u8);
+    let b = /* rng.gen_range(210..255) - */ (9  * size_r as u8);
     RGB {
         r,
         g,
@@ -125,14 +125,16 @@ fn randomize_color(size_r: f32) -> RGB {
     // }
 }
 
-// (x,y)          (x+r,y)
-//     .-----------.
-//     |           |
-//     |  PARAM    |
-//     |           |
-//     .-----------. (x+r, y+r)
-// (x, y+r)
-
+// (0,0)------------------------------->
+// |
+// |  (x,y)          (x+r,y)
+// |      .-----------.
+// |      |           |
+// |      |  PARAM    |
+// |      |           |
+// |      .-----------. (x+r, y+r)
+// |  (x, y+r)
+// V
 fn main() {
     // create a canvas to draw on
     let mut canvas = Canvas::new(2000, 2000);
@@ -145,7 +147,7 @@ fn main() {
 
         for x in (20..2000).step_by(4) {
             let mut start_point = Point { x: x as f32, y: y as f32};
-            let mut size_r = rng.gen_range(8..20) as f32;
+            let mut size_r = rng.gen_range(10..20) as f32;
             // let mut is_valid = check_if_within_range(start_point, &mut valid_points, 10.0);
             let mut line_width = 1;
             let mut loop_size = 20;
@@ -180,10 +182,8 @@ fn main() {
         }
 
     }
-    render::save(
-        &canvas,
-        "tests/svg/basic_end_to_end.svg",
+    render::save(&canvas,
+        "tests/svg/test.svg",
         SvgRenderer::new(),
-    )
-        .expect("Failed to save");
+    ).expect("Failed to save");
 }
